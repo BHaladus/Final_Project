@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <link href="http://s3.amazonaws.com/codecademy-content/courses/ltp/css/shift.css" rel="stylesheet">
+    <link rel="stylesheet" href="http://s3.amazonaws.com/codecademy-content/courses/ltp/css/bootstrap.css">
+    <link rel="stylesheet" href="main.css"> 
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    
+  </head>
+
+  <body>
+	<script>
+		var regions = {};
+									
+		//get regions and countries from the REST Countries
+		$.support.cors = true;
+		$.getJSON("http://restcountries.eu/rest/v1")
+		.done(function(data) {
+			$.each(data,function(index,value){
+				var country_name = value["name"];
+				var country_code = value["altSpellings"][0];
+				var region = value["subregion"];
+				
+				if (!(region in regions)){
+					regions[region] = []
+				}
+				regions[region].push({"name":country_name,"code":country_code});
+			});
+			
+			
+			$.each(regions, function(key,value) {
+				$("#regions").append($("<option />").val(key).text(key));
+			});
+			
+			$.each(regions[Object.keys(regions)[0]], function(index,value) {
+				$("#countries").append($("<option />").val(value["code"]).text(value["name"]));
+			});
+			
+		})
+		.fail(function(jqXHR, textStatus, errorThrown) {   
+					alert('Error Message: '+textStatus);
+					alert('HTTP Error: '+errorThrown);
+		});
+		
+		// parse data from the worldbank api
+		function reload(){
+				var countrycode = $("#countries option:selected").val();
+				var year = $("#year option:selected").val();
+				var query = "http://api.worldbank.org/countries/"+countrycode+"/indicators/NY.GDP.MKTP.CD?date="+year+"&format=jsonP"		
+				
+				$.ajax({
+					url: query,
+					type: "GET",
+					dataType: "jsonp",
+					jsonp: "prefix",
+					jsonpCallback: "jquery_"+(new Date).getTime(),
+					
+					crossDomain: true,
+					error: function(jqXHR, textStatus, errorThrown) {   
+						alert('Error Message: '+textStatus);
+						alert('HTTP Error: '+errorThrown);
+					},
+					success: function( response ) {
+						response = response[1][0];
+						var indicator = response["indicator"];
+						var country =  response["country"]["value"];
+						var date = response["date"];
+						var indicator_id = indicator["id"];
+						var indicator_value = indicator["value"];
+						var value = response["value"];
+						
+						var str = "<h2>" + country + "</h2>"
+								+ "<h3>Data from</h3>" +date
+								+ "<h3>"+indicator_value+"</h3>"
+								+value;
+						$("#result").html(str);
+					}
+				});
+		}
+
+		$(function() {
+			
+			// Displays year choices from 2000 to 2013
+			for (i = 2000; i <= new Date().getFullYear()-1; i++){
+				$("#year").append($("<option />").val(i).text(i));
+			}
+			$("#regions").change(function() {
+				var selected = $("#regions option:selected").text();
+				$("#countries").find('option').remove().end();
+				$.each(regions[selected], function(index,value) {
+					$("#countries").append($("<option />").val(value["code"]).text(value["name"]));
+				});
+			
+			});
+			
+			$("#countries").change(reload);
+			$("#year").change(reload);
+			$("#regions").change(reload);
+				
+
+		});
+		
+	</script>
+    <div class="nav">
+      <div class="container">
+        <ul class="pull-left">
+          <li><a href="#">Home</a></li>
+          <li><a href="#">About</a></li>
+        </ul>
+        <ul class="pull-right">
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="jumbotron">
+      <div class="container">
+        <h1>Search your</h1>
+		<h1>Worldbank data!</h1>
+        <p>Discover wealth of nations</p>
+      </div>
+    </div> 
+	
+    <div class = "choices">
+	  <div class="container">
+		<select id="regions" autofocus></select>
+		<select id="countries"></select>
+		<select id="year"></select>
+		<div id="result"></div>
+	  </div>
+    </div>
+	
+    
+	</div>
+  </body>
+</html>
